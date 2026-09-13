@@ -1,0 +1,24 @@
+{
+  "composer": "Ashen Keep original procedural score",
+  "license": "Project original, no external samples",
+  "tracks": [
+    {
+      "file": "lanterns-in-the-keep.mp3",
+      "bpm": 78,
+      "bars": 24,
+      "duration": 73.84614512471656,
+      "peak": 0.7799999713897705,
+      "rms": 0.15415047109127045,
+      "seamDelta": 0.0028502047061920166
+    },
+    {
+      "file": "crown-of-cinders.mp3",
+      "bpm": 132,
+      "bars": 32,
+      "duration": 58.18181405895692,
+      "peak": 0.7799999713897705,
+      "rms": 0.1627999246120453,
+      "seamDelta": 0.00620017945766449
+    }
+  ]
+}

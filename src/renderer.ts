@@ -1,3 +1,4 @@
+import {drawProjectiles} from './projectile-vfx';
 import * as THREE from 'three';
 import {drawProp} from './art';
 import {drawBackground,drawForeground,assetsReady} from './environment';
@@ -40,7 +41,7 @@ export class GameRenderer {
    if(e.attack>0&&e.kind!=='boss'&&e.kind!=='elite'){c.save();c.globalAlpha=.3+Math.sin(t*20)*.1;c.fillStyle='#cf6551';const width=strikeRadius(e.kind)*2;c.fillRect(e.x-camera-width/2,436,width,4);c.fillRect(e.x-camera-width/2,431,3,9);c.fillRect(e.x-camera+width/2,431,3,9);c.restore();c.fillStyle='#f4cd9a';c.font='bold 16px serif';c.textAlign='center';c.fillText('!',e.x-camera,e.y-75);}
    const special=e.kind==='boss'||e.kind==='elite';const duration=special?(e.variant==='storm'?1.15:e.variant==='hollow-king'?1:.9):.45;const recovery=special?(e.kind==='boss'?1.05:1.15):.18;
    const enemyProgress=e.attack>0?(e.attack>.12?.2*(1-e.attack/duration):.2+(1-e.attack/.12)*.25):(e.recovery??0)>0?.45+(1-(e.recovery??0)/recovery)*.55:undefined;
-   drawActor(c,{kind:e.kind,variant:e.variant,telegraph:e.telegraph,combo:(e.move??0)%2+1,x:e.x-camera,y:e.y,facing:e.facing,moving:e.attack<=0&&!(e.recovery??0),grounded:e.kind!=='bat'&&e.kind!=='wraith',attack:Math.max(e.attack,e.recovery??0),flash:e.flash,time:t+e.id*.31,armorBroken:e.armorBroken,bossPhase:e.bossPhase??1,attackProgress:enemyProgress});
+   drawActor(c,{kind:e.kind,variant:e.variant,telegraph:e.telegraph,combo:(e.visualMove??e.move??0)%2+1,x:e.x-camera,y:e.y,facing:e.facing,moving:e.attack<=0&&!(e.recovery??0),grounded:e.kind!=='bat'&&e.kind!=='wraith',attack:Math.max(e.attack,e.recovery??0),flash:e.flash,time:t+e.id*.31,armorBroken:e.armorBroken,bossPhase:e.bossPhase??1,attackProgress:enemyProgress});
    if(special){c.textAlign='center';c.font='11px serif';c.fillStyle=encounterFor(e).color;c.fillText(e.attack>0?(e.telegraph??''):encounterFor(e).name,e.x-camera,e.y-(e.kind==='boss'?158:116));}
    if((e.burn??0)>0){c.fillStyle='#ffa75f';c.font='15px serif';c.textAlign='center';c.fillText('♨',e.x-camera,e.y-79);c.fillStyle='#cf7048';for(let i=0;i<3;i++){const k=(t*1.3+i*.3)%1;c.globalAlpha=1-k;c.fillRect(e.x-camera+Math.sin(i*3+t)*10,e.y-20-k*48,2,5);}c.globalAlpha=1;}
    if(e.hp<e.maxHp||e.kind==='elite'){const width=e.kind==='boss'?80:e.kind==='elite'?55:28,y=e.y-(e.kind==='boss'?145:e.kind==='elite'?108:71);c.fillStyle='#182225';c.fillRect(e.x-camera-width/2,y,width,3);c.fillStyle=e.kind==='elite'?'#dcb878':'#c58c85';c.fillRect(e.x-camera-width/2,y,width*Math.max(0,e.hp/e.maxHp),3);}
@@ -51,13 +52,7 @@ export class GameRenderer {
   const invulnAlpha=p.invuln>0&&!g.reducedMotion?.68+Math.sin(t*35)*.22:1;c.save();c.globalAlpha=invulnAlpha;
   drawActor(c,{kind:g.selectedClass,x:p.x-camera,y:p.y,facing:p.attack>0?g.attackFacing:p.facing,moving:Math.abs(p.vx)>0,grounded:p.grounded,attack:p.attack,flash:0,time:t,attackProgress:p.attack>0?1-p.attack/g.attackDuration:undefined,combo:g.attackCombo,skill:g.attackIsSkill,velocityY:p.vy});c.restore();
   drawBuild(c,g,camera);
-  for(const shot of g.shots){const x=shot.x-camera,y=shot.y;c.save();c.translate(x,y);c.rotate(Math.atan2(shot.vy,shot.vx));
-   if(!shot.hostile&&g.selectedClass==='ranger'){
-    c.strokeStyle='#78998f';c.globalAlpha=.35;c.lineWidth=2;c.beginPath();c.moveTo(-46,0);c.lineTo(5,0);c.stroke();c.globalAlpha=1;c.fillStyle='#c9d4b4';c.fillRect(-18,-1,27,2);c.fillStyle='#f1f3ce';c.beginPath();c.moveTo(15,0);c.lineTo(5,-4);c.lineTo(6,4);c.closePath();c.fill();c.fillStyle='#75cbb7';c.fillRect(-19,-3,5,6);
-   }else{
-    const warm=!shot.hostile;c.globalCompositeOperation='lighter';c.globalAlpha=.2;c.fillStyle=shot.color;c.beginPath();c.ellipse(-12,0,23,shot.radius*1.2,0,0,Math.PI*2);c.fill();c.globalAlpha=.8;c.beginPath();c.moveTo(-28,-2);c.lineTo(6,-shot.radius);c.lineTo(12,0);c.lineTo(4,shot.radius);c.lineTo(-20,3);c.closePath();c.fill();c.fillStyle=warm?'#ffe1a2':'#ebc1db';c.fillRect(1,-3,6,6);
-   }c.restore();
-  }
+  drawProjectiles(c,g,camera);
   drawEffects(c,g.effects,camera,g.reducedMotion);drawDebris(c,g.debris,camera);
   for(const part of g.particles){c.globalAlpha=Math.min(1,part.life*3);c.fillStyle=part.color;c.fillRect(Math.round(part.x-camera),Math.round(part.y),part.size,part.size);}c.globalAlpha=1;
   c.textAlign='center';for(const f of g.floaters){c.globalAlpha=Math.min(1,f.life*3);c.font=f.text.length>4?'bold 14px serif':'bold 17px monospace';c.strokeStyle='#11191b';c.lineWidth=3;c.strokeText(f.text,f.x-camera,f.y);c.fillStyle=f.color;c.fillText(f.text,f.x-camera,f.y);}c.globalAlpha=1;

@@ -1,12 +1,6 @@
 import type {Game} from './game';
 import type {Prop} from './types';
-export function drawHazards(c:CanvasRenderingContext2D,g:Game,camera:number){
- for(const h of g.hazards){const x=Math.round(h.x-camera);if(x+h.w<0||x>960)continue;c.save();c.fillStyle=h.color;c.strokeStyle=h.color;
-  if(h.delay>0){c.globalAlpha=.12;c.fillRect(x,h.y,h.w,h.h);c.globalAlpha=.75;c.lineWidth=2;c.setLineDash([5,5]);c.strokeRect(x,h.y,h.w,h.h);c.setLineDash([]);c.globalAlpha=.55;c.fillRect(x,438,h.w,3);c.fillStyle='#f5dfb3';c.font='10px serif';c.textAlign='center';c.fillText(h.label,x+h.w/2,Math.max(130,h.y-7));}
-  else{c.globalAlpha=.7;c.fillRect(x,h.y,h.w,h.h);c.globalAlpha=.9;c.fillStyle='#fff0c8';if(h.kind==='rain')c.fillRect(x+h.w*.45,h.y,h.w*.1,h.h);else for(let i=0;i<h.w;i+=16){c.beginPath();c.moveTo(x+i,440);c.lineTo(x+i+8,h.y+8);c.lineTo(x+i+16,440);c.fill();}}
-  c.restore();
- }
-}
+export {drawHazards} from './hazard-vfx';
 export function drawJourneyProp(c:CanvasRenderingContext2D,p:Prop,t:number):boolean{
  if(!['shop','memory','trial','pact'].includes(p.kind))return false;
  c.save();c.translate(Math.round(p.x),Math.round(p.y));c.globalAlpha=p.used?.45:1;

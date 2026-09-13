@@ -26,3 +26,13 @@ The game applies source-sheet crops, nearest-neighbor scale and horizontal mirro
 `public/art/banquet-moon-v2.png` was generated for this project with OpenAI image generation in September 2026. It is separate from LuizMelo's CC0 work. No third-party commercial game sprites or illustrations were extracted.
 
 `public/art/chapter-atlas-v1.png` was also generated with OpenAI image generation in September 2026: four original panels for the forbidden library, ossuary, storm clocktower and eclipse throne. Runtime crops these panels and adds chapter-specific scenery.
+
+## Original soundtrack
+
+`public/audio/lanterns-in-the-keep.mp3` — “古堡遗灯”, 78 BPM, 24 bars, approximately 74 seconds. Bell melody, harpsichord, pipe-organ harmony and a restrained string bed for exploration.
+
+`public/audio/crown-of-cinders.mp3` — “烬冠之战”, 132 BPM, 32 bars, approximately 58 seconds. Organ lead, string ostinato, bass and synthesized battle percussion for boss fights.
+
+Both are original scores synthesized for Ashen Keep, with no external samples, recordings or copied game melodies. The reproducible composition/renderer is `scripts/compose_soundtrack.py` (NumPy + ffmpeg); exact loop lengths are in `public/audio/manifest.json`. Audio-service credentials were unavailable; these are authored procedural music, not provider-generated or recorded orchestral performances.
+
+At runtime, large connected pure-white slash overlays are suppressed in selected sword-animation frames so that the game's timed ribbons own the attack effect. Clean caster poses avoid baked fireballs on lightning/curse enemies. Source PNGs stay unchanged; weapon/body details and artist credit are retained.

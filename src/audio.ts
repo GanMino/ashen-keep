@@ -1,8 +1,9 @@
+import {Music,type MusicCue} from './music';
 export type SoundEvent='hit'|'kill'|'jump'|'dash'|'hurt'|'loot'|'skill'|'door'|'level'|'swing'|'heavy'|'armor'|'bell'|'land'|'arrow'|'fire';
 
 /** Locally synthesized fallback: layered material transients, never game RNG. */
 export class Sound {
- ctx:AudioContext|null=null;muted=false;
+ ctx:AudioContext|null=null;muted=false;music=new Music();
  private master:GainNode|null=null;
  private noise:AudioBuffer|null=null;
  private played=new Map<SoundEvent,number>();
@@ -12,12 +13,13 @@ export class Sound {
  private ambienceGain:GainNode|null=null;
  private visibilityBound=false;
  unlock(){
-  if(!this.ctx){try{this.ctx=new AudioContext();this.master=this.ctx.createGain();this.master.gain.value=this.muted?0:.25;const compressor=this.ctx.createDynamicsCompressor();compressor.threshold.value=-14;compressor.ratio.value=5;this.master.connect(compressor).connect(this.ctx.destination);this.noise=this.makeNoise(3);}catch{return;}}
+  if(!this.ctx){try{this.ctx=new AudioContext();this.master=this.ctx.createGain();this.master.gain.value=this.muted?0:.25;const compressor=this.ctx.createDynamicsCompressor();compressor.threshold.value=-14;compressor.ratio.value=5;this.master.connect(compressor).connect(this.ctx.destination);this.noise=this.makeNoise(3);this.music.attach(this.ctx,this.master);}catch{return;}}
   if(this.ctx.state==='suspended')void this.ctx.resume().catch(()=>{});
-  if(!this.visibilityBound){document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stopAmbience();else if(this.ambienceWanted)this.startAmbience();});this.visibilityBound=true;}
+  if(!this.visibilityBound){document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stopAmbience();else if(this.ambienceWanted)this.startAmbience();this.music.refresh();});this.visibilityBound=true;}
   if(this.ambienceWanted)this.startAmbience();
  }
- setMuted(value:boolean){this.muted=value;if(this.ctx&&this.master)this.master.gain.setTargetAtTime(value?0:.25,this.ctx.currentTime,.025);if(value)this.stopAmbience();else if(this.ambienceWanted)this.startAmbience();}
+ setMuted(value:boolean){this.muted=value;this.music.setCue(this.music.wanted,value);if(this.ctx&&this.master)this.master.gain.setTargetAtTime(value?0:.25,this.ctx.currentTime,.025);if(value)this.stopAmbience();else if(this.ambienceWanted)this.startAmbience();}
+ setMusic(cue:MusicCue){this.music.setCue(cue,this.muted);}
  setAmbience(active:boolean){this.ambienceWanted=active;if(active)this.startAmbience();else this.stopAmbience();}
  private makeNoise(seconds:number){const c=this.ctx!,buffer=c.createBuffer(1,Math.ceil(c.sampleRate*seconds),c.sampleRate),data=buffer.getChannelData(0);let seed=0x472fa;for(let i=0;i<data.length;i++){seed=(Math.imul(seed,1664525)+1013904223)|0;data[i]=((seed>>>0)/4294967296)*2-1;}return buffer;}
  private startAmbience(){const c=this.ctx;if(!c||!this.master||this.muted||document.hidden||this.ambience)return;const source=c.createBufferSource(),gain=c.createGain(),filter=c.createBiquadFilter();source.buffer=this.noise;source.loop=true;filter.type='lowpass';filter.frequency.value=380;filter.Q.value=.3;gain.gain.setValueAtTime(0,c.currentTime);gain.gain.linearRampToValueAtTime(.085,c.currentTime+1.5);source.connect(filter).connect(gain).connect(this.master);source.start();this.ambience=source;this.ambienceGain=gain;source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};}

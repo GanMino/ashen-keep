@@ -1,0 +1,28 @@
+import {chromium} from '@playwright/test';
+import {mkdir,writeFile,copyFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const out=process.env.EVIDENCE_DIR||'artifacts/vfx-audio-3';await mkdir(out,{recursive:true});
+const browser=await chromium.launch({channel:'chromium',headless:true});const context=await browser.newContext({viewport:{width:1280,height:720},recordVideo:{dir:out+'/video',size:{width:1280,height:720}}});const page=await context.newPage(),errors=[];
+page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url())});
+try{
+await page.goto('http://127.0.0.1:5190/?test=1');await page.locator('[data-action="start"]').click();await page.locator('[data-event="ember"]').click();await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.diagnostics().loaded.length===2);await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.active==='explore');
+await page.waitForTimeout(1400);
+const explore=await page.evaluate(()=>{const g=window.__ASHEN_GAME__,m=g.sound.music;window.audioMeter=g.sound.ctx.createAnalyser();window.audioMeter.fftSize=1024;m.bus.connect(window.audioMeter);return m.diagnostics();});await page.waitForTimeout(100);
+const energy=await page.evaluate(()=>{const a=new Float32Array(1024);window.audioMeter.getFloatTimeDomainData(a);return Math.sqrt(a.reduce((s,v)=>s+v*v,0)/a.length);});assert(energy>.001,'music bus must carry a non-silent signal');
+await page.evaluate(()=>{const g=window.__ASHEN_GAME__;g.start(42);g.travel(g.rooms.find(r=>r.kind==='boss').id);g.player.invuln=30;});await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.active==='boss');await page.waitForTimeout(1400);const boss=await page.evaluate(()=>window.__ASHEN_GAME__.sound.music.diagnostics());assert.equal(boss.voices,1);
+await page.keyboard.down('d');await page.keyboard.down('j');await page.keyboard.press('k');await page.waitForTimeout(1500);await page.keyboard.up('d');await page.keyboard.up('j');await page.keyboard.press('Escape');await page.locator('[data-music-volume]').waitFor();await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.diagnostics().voices===0);
+const slider=page.locator('[data-music-volume]');await slider.focus();await page.keyboard.press('Home');for(let i=0;i<4;i++)await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>window.__ASHEN_GAME__.sound.music.volume),.2);await page.screenshot({path:out+'/settings-desktop.png'});await page.locator('[data-action="resume"]').click();await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.active==='boss');
+await page.locator('[data-action="mute"]').click();await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.diagnostics().voices===0);await page.locator('[data-action="mute"]').click();await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.active==='boss');
+await page.evaluate(()=>{const g=window.__ASHEN_GAME__;g.bossDefeated=true;});await page.waitForFunction(()=>window.__ASHEN_GAME__.sound.music.active==='explore');
+// Real class attacks under their normal animation clocks, including every new skill effect.
+const classes=[];
+for(const cls of ['knight','witch','ranger']){
+ await page.evaluate(cls=>{const g=window.__ASHEN_GAME__;g.frozen=false;g.selectedClass=cls;g.start(42);g.travel(1);g.player.x=450;g.player.invuln=10;g.room.enemies.forEach((e,i)=>{e.x=550+i*45;e.hp=e.maxHp=1000;});},cls);
+ await page.keyboard.down('d');await page.keyboard.down('j');await page.waitForTimeout(500);await page.keyboard.up('d');await page.keyboard.press('k');await page.waitForFunction(cls=>window.__ASHEN_GAME__.effects.some(e=>e.kind===({knight:'crescent',witch:'sigil',ranger:'plume'}[cls])),cls);classes.push(await page.evaluate(()=>({class:window.__ASHEN_GAME__.selectedClass,effects:window.__ASHEN_GAME__.effects.map(e=>e.kind),shots:window.__ASHEN_GAME__.shots.length})));await page.waitForTimeout(1100);await page.keyboard.up('j');
+}
+assert(classes[0].effects.includes('crescent'));assert(classes[1].effects.includes('sigil'));assert(classes[2].effects.includes('plume'));
+// Capture active special attacks with their actual warning->release state transitions.
+for(const state of ['elite-tell','elite-cast','storm-cast','curse-cast','bone-cast']){await page.evaluate(async state=>{await window.__THREE_GAME_TEST_HOOKS__.setState(state);window.__ASHEN_GAME__.frozen=true;},state);await page.screenshot({path:out+'/'+state+'.png'});}
+const result={explore,boss,musicBusRms:energy,classes,errors};await writeFile(out+'/interaction-results.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));assert.equal(errors.length,0);
+}finally{const v=page.video();await context.close();await copyFile(await v.path(),out+'/combat-music-motion.webm');}
+const mobile=await browser.newContext({viewport:{width:844,height:390},isMobile:true,hasTouch:true});const mp=await mobile.newPage();await mp.goto('http://127.0.0.1:5190/?test=1');await mp.locator('[data-action="start"]').tap();await mp.locator('[data-event="ember"]').tap();await mp.locator('[data-action="pause"]').tap();await mp.locator('[data-music-volume]').waitFor();await mp.locator('[data-music-volume]').scrollIntoViewIfNeeded();await mp.screenshot({path:out+'/settings-landscape.png'});await mp.locator('[data-action="resume"]').tap();await mp.waitForFunction(()=>window.__ASHEN_GAME__.phase==='playing');await mp.locator('[data-key="KeyK"]').tap();await mp.waitForTimeout(240);await mp.screenshot({path:out+'/skill-touch-landscape.png'});await mobile.close();await browser.close();

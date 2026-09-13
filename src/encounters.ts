@@ -19,7 +19,7 @@ export const ENCOUNTERS:Record<string,{name:string;subtitle:string;tip:string;co
  royalguard:{name:'无首禁卫',subtitle:'王座精英 · 盾震',tip:'跳过盾牌引发的低矮冲击，等待盾牌抬起。',color:'#c8a375'},
  oracle:{name:'盲目先知',subtitle:'王座精英 · 命运裂隙',tip:'观察三道预言光柱之间的空白。',color:'#db9ab9'},
 };
-export interface Hazard {x:number;y:number;w:number;h:number;delay:number;life:number;damage:number;label:string;color:string;kind:'line'|'blast'|'rain';owner?:number}
+export interface Hazard {style?:string;windup?:number;duration?:number;facing?:number;x:number;y:number;w:number;h:number;delay:number;life:number;damage:number;label:string;color:string;kind:'line'|'blast'|'rain';owner?:number}
 export function encounterFor(e:Enemy){return ENCOUNTERS[e.variant??'']??ENCOUNTERS[e.kind==='boss'?'gate-warden':'butcher'];}
 const ground=440;
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -34,7 +34,7 @@ const attacks:Record<string,string[]>={
 function mark(g:Game,e:Enemy,x:number,y:number,w:number,h:number,delay:number,damage:number,kind:Hazard['kind']='blast',life=.22){
  if(g.hazards.length>=40)return;
  w=Math.min(w,g.room.width-56);x=clamp(x,28,g.room.width-28-w);
- g.hazards.push({x,y,w,h,delay:Math.max(.6,delay),life,damage,label:e.telegraph??encounterFor(e).name,color:encounterFor(e).color,kind,owner:e.id});
+ g.hazards.push({style:e.variant,windup:Math.max(.6,delay),duration:life,facing:e.facing,x,y,w,h,delay:Math.max(.6,delay),life,damage,label:e.telegraph??encounterFor(e).name,color:encounterFor(e).color,kind,owner:e.id});
 }
 function fire(g:Game,e:Enemy,x:number,y:number,vx:number,vy:number,damage:number,radius=6){
  if(g.shots.filter(s=>s.hostile&&s.life>0).length>=180)return;
@@ -58,7 +58,7 @@ function summon(g:Game,e:Enemy,kind:'skeleton'|'bat',count:number){
 function begin(g:Game,e:Enemy){
  const id=e.variant??(e.kind==='boss'?'gate-warden':'butcher'),phase=e.bossPhase??1;
  e.move=e.move??0;e.facing=g.player.x>=e.x?1:-1;e.targetX=g.player.x;e.targetY=g.player.y;
- const move=e.move%(attacks[id]?.length??1);e.telegraph=(attacks[id]??attacks.butcher)[move];
+ const move=e.move%(attacks[id]?.length??1);e.visualMove=move;e.telegraph=(attacks[id]??attacks.butcher)[move];
  e.attack=id==='hollow-king'?1:id==='storm'?1.15:.9;e.actionTime=0;e.charge=0;
  const damage=e.kind==='boss'?19+g.floor:14+g.floor;
  const tx=e.targetX,attack=e.attack;
@@ -112,7 +112,9 @@ function resolve(g:Game,e:Enemy){
   g.sound.play('bell');g.effect('shockwave',e.x,ground-4,180,color,.5);
  }
  if(id==='gate-warden'&&move===1)g.sound.play('heavy');
- g.effect(id==='ink-abbot'?'fire':'shockwave',e.x,e.y-12,90,color,.32);
+ if(['hexer','mirror','oracle','ink-abbot'].includes(id))g.effect('sigil',e.x,e.y-48,48,color,.45,1);
+ else if(id==='swarm'||id==='bone-mother')g.effect('spawn',e.x,e.y-10,85,color,.5);
+ else if(id==='storm')g.effect('sigil',e.x,e.y-55,42,color,.35,2);
  e.move=(e.move??0)+1;e.recovery=e.kind==='boss'?1.05:1.15;e.timer=e.kind==='boss'?(phase===2?.65:.95):1.05;
 }
 /** Return true for special enemies even while idle so generic melee AI cannot run twice. */

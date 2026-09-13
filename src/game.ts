@@ -36,6 +36,7 @@ export class Game {
  clearInput(){this.keys.clear();this.pressed.clear();}
  initRoom(){this.room.visited=true;if(!this.room.initialized){this.room.enemies=populate(this.room,this.floor);this.room.initialized=true;this.room.cleared=this.room.enemies.length===0;}}
  start(seed?:number){
+  this.sound.music.reset();
   this.seed=seed??crypto.getRandomValues(new Uint32Array(1))[0]%999999;this.rng=random(this.seed);this.totalFloors=floorCount(this.seed);this.floor=1;
   const s=classStats[this.selectedClass];this.player={x:175,y:440,vx:0,vy:0,hp:s.hp,maxHp:s.hp,facing:1,grounded:true,jumps:0,invuln:1.8,attack:0,dash:0};
   this.damage=s.damage;this.speed=s.speed;this.attackRate=s.rate;this.skillRate=7;this.reach=1;this.extraShots=0;this.lifesteal=0;this.magnet=160;this.xpMultiplier=1;this.thunder=0;this.attackCount=0;
@@ -104,7 +105,7 @@ export class Game {
  }
  resolveStrike(){const strike=this.pendingStrike;if(!strike)return;this.pendingStrike=null;const p=this.player;
   this.effect('slash',p.x,p.y-35,strike.range,strike.heavy?'#ffe3ac':'#caeadc',strike.heavy?.3:.2,strike.skill?3:this.attackCombo,strike.facing);
-  if(strike.skill)this.effect('shockwave',p.x,p.y-5,strike.range,'#eed6a5',.5);
+  if(strike.skill){this.effect('crescent',p.x,p.y-34,strike.range,'#eed6a5',.52,4,strike.facing);this.effect('shockwave',p.x,p.y-5,strike.range,'#bedbcd',.45);}
   let hits=0;for(const e of this.room.enemies)if(!e.dead&&Math.abs(e.y-p.y)<(strike.skill?180:100)&&Math.abs(e.x-p.x)<strike.range&&(strike.skill||(e.x-p.x)*strike.facing>-30)){this.hurtEnemy(e,strike.damage,strike.heavy?290:130);hits++;}
   if(hits&&strike.heavy)this.sound.play('heavy');
  }
@@ -114,8 +115,8 @@ export class Game {
   this.float(p.x,p.y-105,this.selectedClass==='knight'?'月刃风暴':this.selectedClass==='witch'?'烬印连爆':'千羽齐射','#e8d8ab');
  }
  resolveVolley(){const volley=this.pendingVolley;if(!volley)return;this.pendingVolley=null;const p=this.player,witch=this.selectedClass==='witch';this.sound.play(witch?'fire':'arrow');
-  if(volley.skill){if(witch){this.effect('fire',p.x,p.y-26,320,'#f8ac68',.55);for(const e of this.room.enemies)if(!e.dead&&Math.abs(e.x-p.x)<320&&Math.abs(e.y-p.y)<180){e.burn=3;e.burnTick=.3;this.hurtEnemy(e,this.damage*3.6,230);}}
-   else{for(let i=-4;i<=4;i++)this.shoot(p.x,p.y-30,volley.facing*(650-Math.abs(i)*20),i*75,this.damage*2.2,false,'#d9f1ce',4,5);this.effect('impact',p.x+volley.facing*30,p.y-30,55,'#b8dfd3',.25);}return;}
+  if(volley.skill){if(witch){this.effect('sigil',p.x,p.y-40,62,'#efa66a',.6);this.effect('fire',p.x,p.y-26,320,'#f8ac68',.65);for(const e of this.room.enemies)if(!e.dead&&Math.abs(e.x-p.x)<320&&Math.abs(e.y-p.y)<180){e.burn=3;e.burnTick=.3;this.hurtEnemy(e,this.damage*3.6,230);}}
+   else{for(let i=-4;i<=4;i++)this.shoot(p.x,p.y-30,volley.facing*(650-Math.abs(i)*20),i*75,this.damage*2.2,false,'#d9f1ce',4,5);this.effect('plume',p.x+volley.facing*12,p.y-32,125,'#b8dfd3',.5,1,volley.facing);}return;}
   const count=(witch?2:1)+this.extraShots;for(let i=0;i<count;i++){const angle=(i-(count-1)/2)*.13;this.shoot(p.x+volley.facing*20,p.y-30,volley.facing*Math.cos(angle)*(witch?450:760),Math.sin(angle)*300,this.damage,false,witch?'#efaa6c':'#b6e3d2',witch?7:3,witch?2:3);}this.effect(witch?'fire':'impact',p.x+volley.facing*30,p.y-30,14,witch?'#efac6a':'#b8e9d9',.12);
  }
  travel(target:number){const old=this.room;for(const item of this.pickups){if(item.kind==='xp')this.xp+=item.value*this.xpMultiplier;else if(item.kind==='gold')this.gold+=item.value;else this.player.hp=Math.min(this.player.maxHp,this.player.hp+item.value);}
@@ -178,5 +179,5 @@ const dx=p.x-e.x,dist=Math.abs(dx);e.facing=dx>=0?1:-1;e.vx*=Math.exp(-dt*9);
  }
  updatePrompt(){const p=this.player;this.interact='';const labels:Record<string,string>={chest:'开启遗物宝箱',altar:'恢复生命 · 20 金币',shop:'与拾骨商人交易',memory:'调查莉娅的遗灯',trial:'查看试炼条件',pact:'查看血债契约',exit:this.floor===this.totalFloors?'决定王冠的命运':'进入下一章'};for(const prop of this.room.props)if(!prop.used&&Math.abs(prop.x-p.x)<75&&Math.abs(prop.y-p.y)<65&&(prop.kind!=='exit'||this.bossDefeated)){this.interact='E  '+labels[prop.kind];return;}const d=this.room.doors.find(d=>Math.abs(d.x-p.x)<62&&Math.abs(d.y-p.y)<70);if(d)this.interact=this.room.cleared?'E  '+d.label:'清除敌人 · 房门封锁';}
 
- getState():UIState{const boss=this.room.enemies.find(e=>e.kind==='boss'&&!e.dead);return {event:this.event,chapterName:CHAPTERS[this.room.chapter??0].name,objective:this.floor===this.totalFloors?'终局：击败空心王，决定王冠的命运':'目标：'+CHAPTERS[this.room.chapter??0].goal,memories:this.memories,corruption:this.corruption,journal:this.journal,bossName:boss?encounterFor(boss).name:'',bossTip:boss?encounterFor(boss).tip:'',endingTitle:this.endingTitle,endingText:this.endingText,buildSummary:MUTATIONS.filter(m=>this.mutations[m.id]).map(m=>m.name).join(' · '),phase:this.phase,selectedClass:this.selectedClass,hp:Math.ceil(this.player.hp),maxHp:this.player.maxHp,xp:Math.floor(this.xp),xpNext:this.xpNext,level:this.level,floor:this.floor,totalFloors:this.totalFloors,roomName:this.room.name,roomKind:this.room.kind,roomId:this.room.id,rooms:this.rooms,kills:this.kills,gold:this.gold,elites:this.elites,bossDefeated:this.bossDefeated,skillCooldown:this.skillCd,dashCooldown:this.dashCd,combo:this.combo,elapsed:this.elapsed,seed:this.seed,notice:this.notice,interact:this.interact,upgrades:this.upgrades,relics:this.relics,doubleJump:this.doubleJump,breakDash:this.breakDash,bossHp:boss?.hp??0,bossMaxHp:boss?.maxHp??0,muted:this.sound.muted,reducedMotion:this.reducedMotion,best:this.best};}
+ getState():UIState{const boss=this.room.enemies.find(e=>e.kind==='boss'&&!e.dead);return {musicVolume:this.sound.music.volume,event:this.event,chapterName:CHAPTERS[this.room.chapter??0].name,objective:this.floor===this.totalFloors?'终局：击败空心王，决定王冠的命运':'目标：'+CHAPTERS[this.room.chapter??0].goal,memories:this.memories,corruption:this.corruption,journal:this.journal,bossName:boss?encounterFor(boss).name:'',bossTip:boss?encounterFor(boss).tip:'',endingTitle:this.endingTitle,endingText:this.endingText,buildSummary:MUTATIONS.filter(m=>this.mutations[m.id]).map(m=>m.name).join(' · '),phase:this.phase,selectedClass:this.selectedClass,hp:Math.ceil(this.player.hp),maxHp:this.player.maxHp,xp:Math.floor(this.xp),xpNext:this.xpNext,level:this.level,floor:this.floor,totalFloors:this.totalFloors,roomName:this.room.name,roomKind:this.room.kind,roomId:this.room.id,rooms:this.rooms,kills:this.kills,gold:this.gold,elites:this.elites,bossDefeated:this.bossDefeated,skillCooldown:this.skillCd,dashCooldown:this.dashCd,combo:this.combo,elapsed:this.elapsed,seed:this.seed,notice:this.notice,interact:this.interact,upgrades:this.upgrades,relics:this.relics,doubleJump:this.doubleJump,breakDash:this.breakDash,bossHp:boss?.hp??0,bossMaxHp:boss?.maxHp??0,muted:this.sound.muted,reducedMotion:this.reducedMotion,best:this.best};}
 }

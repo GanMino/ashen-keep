@@ -506,7 +506,25 @@ const ATLAS: Record<string,Atlas> = {
   }
 };
 
-const loaded = new Map<string, HTMLImageElement>();
+// Strip large pure-white baked slash components at load time. Weapon/body pixels
+// remain; actual combat ribbons now have one source of timing and hitbox extent.
+function cleanBakedSlashes(img:HTMLImageElement,file:string):CanvasImageSource {
+ if(!/^(knight|butcher|warden|king)\/attack/.test(file))return img;
+ const a=ATLAS[file.split('/')[0]],canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+ const c=canvas.getContext('2d')!;c.drawImage(img,0,0);const pixels=c.getImageData(0,0,img.width,img.height),d=pixels.data;
+ let changed=false;
+ for(let frame=0;frame<img.width/a.w;frame++){
+  const visited=new Uint8Array(a.w*a.h);
+  const white=(p:number)=>{const x=p%a.w+frame*a.w,y=Math.floor(p/a.w),i=(y*img.width+x)*4;return d[i]>245&&d[i+1]>245&&d[i+2]>245&&d[i+3]>200;};
+  for(let p=0;p<visited.length;p++){if(visited[p]||!white(p))continue;const stack=[p],component:number[]=[];visited[p]=1;
+   while(stack.length){const v=stack.pop()!;component.push(v);const x=v%a.w,y=Math.floor(v/a.w);for(const n of [x>0?v-1:-1,x<a.w-1?v+1:-1,y>0?v-a.w:-1,y<a.h-1?v+a.w:-1])if(n>=0&&!visited[n]&&white(n)){visited[n]=1;stack.push(n);}}
+   const xs=component.map(v=>v%a.w),ys=component.map(v=>Math.floor(v/a.w));const area=(Math.max(...xs)-Math.min(...xs)+1)*(Math.max(...ys)-Math.min(...ys)+1);
+   if(component.length>=90&&component.length/area>.12){changed=true;for(const v of component){const i=(Math.floor(v/a.w)*img.width+v%a.w+frame*a.w)*4;d[i+3]=0;}}
+  }
+ }
+ if(!changed)return img;c.putImageData(pixels,0,0);return canvas;
+}
+const loaded = new Map<string, CanvasImageSource>();
 const failures: string[] = [];
 const base = `${import.meta.env?.BASE_URL ?? '/'}sprites/`;
 const files = [...new Set(Object.values(ATLAS).flatMap(a => Object.values(a.clips).map(c => c.file)))];
@@ -515,7 +533,7 @@ const files = [...new Set(Object.values(ATLAS).flatMap(a => Object.values(a.clip
 export const spritesReady: Promise<void> = typeof Image === 'undefined' ? Promise.resolve() :
   Promise.all(files.map(file => new Promise<void>(resolve => {
     const image = new Image();
-    image.onload = () => { loaded.set(file, image); resolve(); };
+    image.onload = () => { loaded.set(file, cleanBakedSlashes(image,file)); resolve(); };
     image.onerror = () => { failures.push(file); console.error(`Sprite failed to load: ${file}`); resolve(); };
     image.src = base + file;
   }))).then(() => undefined);
@@ -533,7 +551,10 @@ const contactFrame:Record<string,number>={knight:3,witch:5,ranger:4,warden:2,lic
 
 function animation(a:Atlas,p:ActorPose,family:string):[string,number] {
   if(p.attack>0){
-    if(family==='witch')return [p.skill?'attack1':'attack2',-1];
+    // These source attacks bake in large projectiles unrelated to our spell hitboxes.
+    // Use clean body poses and let the combat VFX own the spell.
+    if(family==='firemage')return ['idle',Math.floor(p.time*5)%a.clips.idle.frames];
+    if(family==='witch')return ['attack2',-1];
     const attacks=p.skill?['attack3','attack2','attack1','attack']:(p.combo===3?['attack3','attack2','attack1','attack']:p.combo===2?['attack2','attack1','attack']:['attack1','attack','attack2']);
     return [attacks.find(k=>a.clips[k])??'idle',-1];
   }
@@ -556,6 +577,7 @@ export function drawSpriteActor(c:CanvasRenderingContext2D,pose:ActorPose):boole
     const contact=Math.min(clip.frames-2,contactFrame[family]??Math.floor(clip.frames*.5));
     frame=q<.45?Math.floor(q/.45*contact):contact+Math.floor((q-.45)/.55*(clip.frames-contact));
   }
+  if(p.attack>0&&family==='witch'){const q=Math.max(0,Math.min(1,p.attackProgress??.45));frame=Math.floor(2*(q<.45?q/.45:(1-q)/.55));}
   frame=p.attack>0?Math.max(0,Math.min(clip.frames-1,frame)):Math.max(0,frame%clip.frames);
   // Distinct boss bodies use their own authored anatomy, never a tint of one shared boss.
   const height=p.kind==='boss'?(family==='worm'?118:family==='lich'?143:135):p.kind==='elite'?(family==='flying-eye'?78:100):p.kind==='knight'?71:p.kind==='witch'?73:p.kind==='ranger'?72:p.kind==='bat'?40:p.kind==='wraith'?65:family==='skeleton'?61:52;
