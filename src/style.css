@@ -15,3 +15,5 @@
 @media(pointer:coarse){.touch-controls:not([hidden]){display:flex}.desktop-keys{display:none}.abilities{bottom:86px}}
 
 .map-pan-hint{display:none}@media(max-width:560px) and (orientation:portrait){.map-pan-hint{display:block;font-size:9px;color:#9d9d7e;margin-top:12px;letter-spacing:.08em}.castle-map{min-width:540px}}
+
+@media(pointer:coarse){.abilities .ability{display:none}}

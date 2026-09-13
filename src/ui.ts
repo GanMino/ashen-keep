@@ -2,7 +2,7 @@ import type {ClassId, UIActions, UIState} from './types';
 
 const classes: Record<ClassId, { name: string; role: string; text: string; weapon:string; color:string; icon:string }> = {
   knight:{name:'灰烬骑士',role:'近战 · 重刃横扫',text:'以钢铁叩响长夜。大范围斩击与坚韧体魄，在敌潮中杀出血路。',weapon:'月刃风暴',color:'#dba876',icon:'M24 3L28 10 27 31 36 36 32 40 26 36 25 48 21 48 20 36 14 40 10 36 19 31 18 10Z'},
-  witch:{name:'余火女巫',role:'法术 · 烈焰群伤',text:'让旧日的余火再次燃烧。穿透魔弹与爆裂火雨，将整片暗影化作灰烬。',weapon:'烬火爆裂',color:'#ec9775',icon:'M24 3C35 17 16 17 31 29C37 25 34 19 34 19C47 32 40 47 25 48C7 48 5 31 16 21C12 38 28 37 22 28C16 20 25 17 24 3Z'},
+  witch:{name:'余火女巫',role:'法术 · 烈焰群伤',text:'让旧日的余火再次燃烧。穿透魔弹与爆裂火雨，将整片暗影化作灰烬。',weapon:'烬印连爆',color:'#ec9775',icon:'M24 3C35 17 16 17 31 29C37 25 34 19 34 19C47 32 40 47 25 48C7 48 5 31 16 21C12 38 28 37 22 28C16 20 25 17 24 3Z'},
   ranger:{name:'暗夜游侠',role:'远程 · 迅疾箭雨',text:'在月光抵达之前，箭已离弦。灵巧走位与迅疾连射，猎杀每一个破绽。',weapon:'千羽齐射',color:'#a6c7b6',icon:'M12 4Q47 24 12 47L20 25Z M12 4L20 25 12 47 M3 24H43M35 17L44 24 35 31'},
 };
 const icon=(id:ClassId)=>`<svg viewBox="0 0 52 52" aria-hidden="true"><path d="${classes[id].icon}" fill="${id==='ranger'?'none':'currentColor'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
@@ -23,11 +23,11 @@ export class GameUI {
       <section class="vitals"><div class="vitals-title"><span class="player-emblem" data-ref="emblem"></span><span data-ref="className"></span><span class="level">LV. <b data-ref="level">1</b></span></div><div class="health-meter"><i data-ref="healthBar"></i><span data-ref="health"></span></div><div class="xp-meter"><i data-ref="xpBar"></i></div><div class="run-stats"><span>✧ <b data-ref="gold"></b></span><span>击破 <b data-ref="kills"></b></span><span class="combo" data-ref="combo"></span></div></section>
       <section class="location"><div class="eyebrow" data-ref="floor"></div><div class="room-name" data-ref="room"></div><div class="objectives" data-ref="objectives"></div></section>
       <nav class="hud-nav"><button class="icon-button" data-action="map" aria-label="古堡地图" title="地图 M">⌘<small>M</small></button><button class="icon-button" data-action="mute" aria-label="切换音效" title="切换音效" data-ref="mute">♪</button><button class="icon-button" data-action="pause" aria-label="暂停游戏" title="暂停 Esc">Ⅱ</button></nav>
-      <div class="boss-meter" data-ref="bossWrap" hidden><div>古堡领主 <span data-ref="bossHealth"></span></div><div><i data-ref="bossBar"></i></div></div>
+      <div class="boss-meter" data-ref="bossWrap" hidden><div>负钟者 · 残响之囚 <span data-ref="bossHealth"></span></div><div><i data-ref="bossBar"></i></div></div>
       <div class="notice" data-ref="notice"></div><div class="interact" data-ref="interact"></div>
       <div class="abilities"><div class="ability" data-ref="skill">${key('K')} <span data-ref="skillText"></span></div><div class="ability" data-ref="dash">${key('SHIFT')} <span data-ref="dashText"></span></div><div class="traversal" data-ref="traversal"></div></div>
       <div class="desktop-keys">${key('A D')} 移动 <em>·</em> ${key('SPACE')} 跳跃 <em>·</em> ${key('J')} 攻击 <em>·</em> ${key('E')} 互动</div>
-    </div><div class="screen-overlay"></div><div class="touch-controls" hidden><div class="touch-move"><button data-key="ArrowLeft" aria-label="向左移动">◀</button><button data-key="ArrowRight" aria-label="向右移动">▶</button></div><div class="touch-actions"><button class="touch-small" data-key="KeyE">互动</button><button class="touch-small" data-key="ShiftLeft">冲刺</button><button class="touch-small" data-key="KeyK">技能</button><button class="touch-main" data-key="Space">跳跃</button><button class="touch-main attack-touch" data-key="KeyJ">攻击</button></div></div>`;
+    </div><div class="screen-overlay"></div><div class="touch-controls" hidden><div class="touch-move"><button data-key="ArrowLeft" aria-label="向左移动">◀</button><button data-key="ArrowRight" aria-label="向右移动">▶</button></div><div class="touch-actions"><button class="touch-small" data-key="KeyE">互动</button><button class="touch-small" data-key="ShiftLeft" data-ref="touchDash" aria-label="冲刺">冲刺</button><button class="touch-small" data-key="KeyK" data-ref="touchSkill" aria-label="技能">技能</button><button class="touch-main" data-key="Space">跳跃</button><button class="touch-main attack-touch" data-key="KeyJ">攻击</button></div></div>`;
     this.overlay=root.querySelector('.screen-overlay')!;
     this.hud=root.querySelector('.hud')!;
     this.touch=root.querySelector('.touch-controls')!;
@@ -64,6 +64,7 @@ export class GameUI {
     this.text('interact',s.interact);this.refs.interact.hidden=!s.interact;
     this.text('skillText',s.skillCooldown>0?`${s.skillCooldown.toFixed(1)}s`:`${classes[s.selectedClass].weapon}`);this.refs.skill.classList.toggle('cooling',s.skillCooldown>0);
     this.text('dashText',s.dashCooldown>0?`${s.dashCooldown.toFixed(1)}s`:'暗影冲刺');this.refs.dash.classList.toggle('cooling',s.dashCooldown>0);
+    this.text('touchSkill',s.skillCooldown>0?`${s.skillCooldown.toFixed(1)}s`:'技能');this.text('touchDash',s.dashCooldown>0?`${s.dashCooldown.toFixed(1)}s`:'冲刺');
     this.text('traversal',`${s.doubleJump?'✦ 二段跳':''}${s.breakDash?'　✦ 破障冲刺':''}`);
     this.refs.bossWrap.hidden=!(s.bossMaxHp>0&&s.bossHp>0&&s.roomKind==='boss');this.bar('bossBar',s.bossHp/s.bossMaxHp);this.text('bossHealth',`${Math.ceil(s.bossHp)} / ${s.bossMaxHp}`);
     const signature=JSON.stringify([s.phase,s.selectedClass,s.muted,s.reducedMotion,s.phase==='upgrade'?s.upgrades:null,s.phase==='map'?s.rooms.map(r=>[r.id,r.visited,r.cleared,r.doors.map(d=>d.gate)]):null,s.phase==='map'?s.roomId:null,['dead','won'].includes(s.phase)?[s.floor,s.kills,s.gold,s.elapsed,s.best]:null]);

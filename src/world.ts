@@ -1,14 +1,15 @@
 import type {Room,RoomKind,Enemy} from './types';
 export function random(seed:number){let a=seed>>>0;return ()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 export function floorCount(seed:number){return 3+Math.floor(random(seed)()*3);}
-const names=['遗忘回廊','灰烬藏书室','破碎长廊','荆棘庭院','无光墓室','沉钟礼拜堂'];
+const zones=[['残烛宴会厅','绯红长廊','月下酒窖','碎镜舞厅','荆棘中庭','无声侧厅'],['月蚀藏书塔','禁书回廊','星图书房','漂浮档案馆','月影书斋','秘法观测厅'],['圣骨长廊','沉眠墓室','骨白礼拜堂','忏悔拱廊','寂静圣坛','封棺密室'],['暴雨钟楼','悬钟回廊','锈蚀机枢','风暴露台','残钟侧厅','断链中庭']];
 export function createFloor(seed:number,floor:number):Room[]{
+ const names=zones[(floor-1)%4];
  const rng=random(seed+floor*7919), ri=(a:number,b:number)=>a+Math.floor(rng()*(b-a+1));
  const rooms:Room[]=[]; const combatCount=ri(2,4);
  const kinds:RoomKind[]=['entrance','combat','elite',...Array<RoomKind>(combatCount-1).fill('combat'),'elite','boss'];
  function add(kind:RoomKind,mapX:number,mapY:number):Room{
   const id=rooms.length,width=kind==='boss'?1560:ri(14,18)*100;
-  const room:Room={id,kind,name:kind==='entrance'?'古堡门厅':kind==='elite'?(rooms.filter(r=>r.kind==='elite').length===0?'守誓者之庭':'裂甲者之厅'):kind==='boss'?'亡王谒见厅':kind==='treasure'?'封缄秘库':kind==='sanctuary'?'烛火圣所':names[ri(0,names.length-1)],width,seed:ri(1,9999999),platforms:[],doors:[],props:[],visited:false,cleared:false,mapX,mapY,enemies:[],initialized:false};
+  const room:Room={id,kind,name:kind==='entrance'?['烛火门厅','藏书塔入口','圣骨堂前厅','钟楼入口'][(floor-1)%4]:kind==='elite'?(rooms.filter(r=>r.kind==='elite').length===0?'铁誓行刑庭':'碎甲守卫厅'):kind==='boss'?'负钟者的谒见厅':kind==='treasure'?'封缄秘库':kind==='sanctuary'?'烛火圣所':names[ri(0,names.length-1)],width,seed:ri(1,9999999),platforms:[],doors:[],props:[],visited:false,cleared:false,mapX,mapY,enemies:[],initialized:false};
   for(let x=260;x<width-200;x+=ri(220,300)){room.platforms.push({x,y:ri(0,1)?350:330,w:ri(120,190)});if(rng()>.6)room.platforms.push({x:x+60,y:245,w:120});}
   if(kind==='treasure') room.props.push({x:width/2,y:440,kind:'chest',used:false});
   if(kind==='sanctuary') room.props.push({x:width/2,y:440,kind:'altar',used:false});
