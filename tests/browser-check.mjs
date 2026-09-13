@@ -8,7 +8,9 @@ const context=await browser.newContext({viewport:{width:1280,height:720},recordV
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url())});
 await page.goto(testUrl.href);await page.waitForFunction(()=>window.__ASHEN_GAME__);await page.screenshot({path:out+'/menu.png'});
 await page.locator('[data-class="ranger"]').click();await page.locator('[data-action="start"]').click();
-await page.evaluate(()=>window.__ASHEN_GAME__.start(42));
+await page.locator('[data-event="ember"]').click();
+// Isolate input/navigation regression from difficulty; policy tests run without this fixture.
+await page.evaluate(()=>{window.__ASHEN_GAME__.start(42);window.__ASHEN_GAME__.player.invuln=30;});
 const initial=await page.evaluate(()=>({x:window.__ASHEN_GAME__.player.x,class:window.__ASHEN_GAME__.selectedClass,frames:window.__THREE_GAME_DIAGNOSTICS__.state.frames}));
 await page.keyboard.down('d');await page.keyboard.down('j');await page.waitForTimeout(1400);await page.keyboard.up('d');await page.keyboard.up('j');
 const moved=await page.evaluate(()=>window.__ASHEN_GAME__.player.x);
@@ -41,14 +43,15 @@ await page.evaluate(()=>window.__THREE_GAME_TEST_HOOKS__.setState('upgrade'));co
 // Set up a vulnerable state, then let an actual enemy attack produce failure.
 await page.evaluate(()=>{const g=window.__ASHEN_GAME__;g.start(77);g.player.hp=1;g.player.invuln=0;const e=g.room.enemies.find(e=>e.kind==='skeleton');e.x=g.player.x+25;e.y=440;e.timer=0;});
 await page.waitForFunction(()=>window.__ASHEN_GAME__.phase==='dead',{timeout:6000});await page.screenshot({path:out+'/dead.png'});await page.locator('[data-action="restart"]').click();
+await page.locator('[data-event="ember"]').click();
 const restarted=await page.evaluate(()=>({phase:window.__ASHEN_GAME__.phase,hp:window.__ASHEN_GAME__.player.hp,kills:window.__ASHEN_GAME__.kills}));
 await page.locator('[data-action="mute"]').click();const muted=await page.evaluate(()=>window.__ASHEN_GAME__.sound.muted);await page.locator('[data-action="mute"]').click();
 const result={initial,moved,jumpY,dashCooldown,progression,upgradeChosen,travelBefore,travelAfter,pauseStable,mapVisible,restarted,muted,errors};
 await writeFile(out+'/input-results.json',JSON.stringify(result,null,2));
 const video=page.video();await context.close();await copyFile(await video.path(),out+'/motion.webm');
 // Portrait touch real pointer input, stable release, and state capture.
-const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const mp=await mobile.newPage();await mp.goto(testUrl.href);await mp.locator('[data-action="start"]').tap();
-const right=mp.locator('[data-key="ArrowRight"]');const box=await right.boundingBox();await mp.mouse.move(box.x+box.width/2,box.y+box.height/2);await mp.mouse.down();await mp.waitForTimeout(400);await mp.mouse.up();const touch=await mp.evaluate(()=>({x:window.__ASHEN_GAME__.player.x,keys:[...window.__ASHEN_GAME__.keys]}));
+const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const mp=await mobile.newPage();await mp.goto(testUrl.href);await mp.locator('[data-action="start"]').tap();await mp.locator('[data-event="ember"]').tap();
+const right=mp.locator('[data-key="ArrowRight"]');await right.waitFor({state:'visible'});const box=await right.boundingBox();await mp.mouse.move(box.x+box.width/2,box.y+box.height/2);await mp.mouse.down();await mp.waitForTimeout(400);await mp.mouse.up();const touch=await mp.evaluate(()=>({x:window.__ASHEN_GAME__.player.x,keys:[...window.__ASHEN_GAME__.keys]}));
 await mp.screenshot({path:out+'/touch-play.png'});await writeFile(out+'/touch-results.json',JSON.stringify(touch,null,2));await mobile.close();await browser.close();
 console.log(JSON.stringify({...result,touch},null,2));
 if(moved<=initial.x+100||jumpY>=435||dashCooldown<=0||progression.kills===0||!pauseStable||!mapVisible||restarted.phase!=='playing'||errors.length||touch.x<=200||touch.keys.length)process.exitCode=1;

@@ -2,13 +2,17 @@ import type { Room } from './types';
 
 type Ctx = CanvasRenderingContext2D;
 const W = 960, H = 540, FLOOR = 440;
-const plate = new Image();
-/** Stable asset readiness for the first playable frame and visual captures. */
-export const assetsReady: Promise<void> = new Promise(resolve => {
-  plate.onload = () => resolve();
-  plate.onerror = () => { console.warn('Banquet background failed to load'); resolve(); };
-  plate.src = `${import.meta.env.BASE_URL}art/banquet-moon-v2.png`;
-});
+const plate = new Image(), chapterAtlas = new Image();
+function loadImage(image:HTMLImageElement,path:string):Promise<void>{return new Promise(resolve=>{
+ image.onload=()=>resolve();image.onerror=()=>{console.warn(`Environment image failed: ${path}`);resolve();};
+ image.src=`${import.meta.env.BASE_URL}art/${path}`;
+});}
+/** Both atlases finish loading before test capture / first stable frame. */
+export const assetsReady:Promise<void>=Promise.all([
+ loadImage(plate,'banquet-moon-v2.png'),loadImage(chapterAtlas,'chapter-atlas-v1.png')
+]).then(()=>{});
+const chapterOf=(room:Room,floor:number)=>Math.max(0,Math.min(4,room.chapter??floor-1));
+const chapterColors=['#977658','#8a7b91','#8b9c86','#748894','#b18d5c'];
 const caches = new Map<string, HTMLCanvasElement>();
 const rect = (c: Ctx, color: string, x: number, y: number, w: number, h: number) => {
   c.fillStyle = color; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
@@ -66,13 +70,14 @@ function balcony(c:Ctx,x:number,y:number,w:number,seed:number){
   for(let n=0;n<4;n++){const xx=x+15+rnd()*(w-30);rect(c,'#dde0c02a',xx,y,3+rnd()*5,1);}
 }
 function floorCanvas(room:Room,floor:number){
-  const key=`${room.seed}:${room.id}:${floor}:${room.width}`;let cv=caches.get(key);if(cv)return cv;
+  const key=`${room.seed}:${room.id}:${floor}:${room.width}:${room.chapter}:${room.layout}:${room.kind}`;let cv=caches.get(key);if(cv)return cv;
   cv=document.createElement('canvas');cv.width=room.width;cv.height=H;const c=cv.getContext('2d')!,rnd=randomizer(room.seed);
-  rect(c,'#080f1a',0,FLOOR,room.width,100);
+  const zone=chapterOf(room,floor);
+  rect(c,['#100f18','#131121','#0c1818','#0b1522','#140f18'][zone],0,FLOOR,room.width,100);
   // Stone cornice: an irregular worn edge, a carved frieze and deep lower vault.
-  rect(c,'#151f2d',0,FLOOR,room.width,16);rect(c,'#738082',0,FLOOR,room.width,3);rect(c,'#354958',0,443,room.width,9);
-  rect(c,'#9f9b7c',0,451,room.width,2);rect(c,'#233442',0,453,room.width,14);rect(c,'#526170',0,463,room.width,3);
-  const stones=['#1c2939','#202c3b','#263341','#1b2938'];
+  rect(c,'#151f2d',0,FLOOR,room.width,16);rect(c,chapterColors[zone],0,FLOOR,room.width,3);rect(c,'#354958',0,443,room.width,9);
+  rect(c,chapterColors[zone],0,451,room.width,2);rect(c,'#233442',0,453,room.width,14);rect(c,'#526170',0,463,room.width,3);
+  const stones=[['#211d25','#29252b','#2c2830','#201c25'],['#211e30','#252337','#29243a','#201b2d'],['#182a28','#203330','#233833','#152a29'],['#1c2939','#202c3b','#263341','#1b2938'],['#211b24','#29222b','#2e2630','#221d27']][zone];
   for(let x=0;x<room.width;x+=54){
     rect(c,'#101b2a',x,442,2,10);rect(c,'#bbc0a4',x+4,440,22+rnd()*16,1);
     rect(c,'#0d1c2d',x+9,456,33,4);rect(c,'#626b69',x+10,455,32,1);
@@ -118,13 +123,15 @@ function gear(c:Ctx,x:number,y:number,r:number,t:number){
   rect(c,'#9e885b',-6,-6,12,12);rect(c,'#262932',-3,-3,6,6);c.restore();
 }
 function hangingBell(c:Ctx,x:number,broken:boolean,time:number){
-  c.save();c.translate(x,36);
+  c.save();c.translate(x,36);c.scale(.7,.7);c.globalAlpha*=.82;
   for(const dx of [-53,53]){path(c,'#171e28',[dx,-40,dx,40],5);for(let y=-30;y<35;y+=9)rect(c,'#696453',dx-2,y,4,3);}
   path(c,'#090f18',[-76,155,-58,129,-47,93,-45,55,-33,25,-15,14,-15,4,15,4,15,14,33,25,45,55,47,93,58,129,76,155]);
   path(c,'#64533d',[-68,150,-53,127,-41,91,-40,57,-30,29,-13,19,13,19,30,29,40,57,41,91,53,127,68,150]);
   path(c,'#b29a61',[-60,144,-47,125,-37,88,-35,57,-25,32,-13,24,-19,49,-22,89,-28,119,-35,144]);
   path(c,'#403b33',[8,22,25,34,34,60,35,95,49,130,57,146,17,146,9,107,4,69]);
   rect(c,'#b2a16c',-68,145,136,4);rect(c,'#3a332c',-72,149,144,8);rect(c,'#988052',-73,155,146,3);
+  for(let i=0;i<32;i++){const yy=35+(i*17)%103,xx=Math.sin(i*2.3)*Math.min(31,(yy+20)*.4);rect(c,i%3?'#302e2859':'#c0a56b55',xx,yy,2+(i%5),1+(i%2));}
+  for(let i=-3;i<=3;i++){const xx=i*10;path(c,'#a28c584f',[xx-2,108,xx-4,115,xx,120,xx+4,115,xx+2,108],1);}
   for(const yy of [48,98]){path(c,'#b09a6359',[-34,yy,-15,yy+5,13,yy+5,34,yy],2);}
   path(c,'#282b2d',[-9,158,-7,178,0,185,7,178,9,158]);rect(c,'#897651',-5,160,10,15);
   if(broken){path(c,'#07121b',[5,20,-10,51,6,81,-13,114,-2,136,-12,157,1,157,6,135,-2,114,17,81,0,51,13,22]);
@@ -133,36 +140,72 @@ function hangingBell(c:Ctx,x:number,broken:boolean,time:number){
   }
   c.restore();
 }
+/** Decorative room landmarks sit behind actors; actual interactable props are rendered by the game. */
+function roomLandmark(c:Ctx,room:Room,zone:number,time:number){
+ const x=room.width*.5;
+ if(room.kind==='shop'){
+  path(c,'#262333',[x-160,208,x+160,208,x+174,244,x-174,244]);
+  for(let n=0;n<8;n++)path(c,n%2?'#775747':'#454a5d',[x-160+n*40,210,x-120+n*40,210,x-116+n*40,247,x-156+n*40,247]);
+  rect(c,'#ad9463',x-172,244,344,3);
+  for(const dx of [-145,145]){rect(c,'#252c34',x+dx,246,3,148);path(c,'#786d54',[x+dx,247,x+dx,277],2);rect(c,'#9b7750',x+dx-8,278,18,25);rect(c,'#eac179',x+dx-5,281,12,17);glow(c,x+dx,290,45,'#d59c51',.13);}
+  bookshelf(c,x-118,422,80,room.seed+31);bookshelf(c,x+44,422,80,room.seed+43);
+ }else if(room.kind==='event'){
+  arch(c,'#161c2b',x-65,130,130,188);arch(c,'#938361',x-61,134,122,178);arch(c,'#293a4c',x-54,144,108,164);
+  path(c,'#638b91',[x,151,x+42,193,x,280,x-42,193]);path(c,'#a7bead',[x,165,x+27,198,x,260,x-27,198]);
+  rect(c,'#364a54',x-2,150,4,147);rect(c,'#364a54',x-48,207,96,4);
+  path(c,'#b99563',[x-16,280,x,266,x+16,280,x,297]);glow(c,x,240,110,'#85aca5',.07);
+ }else if(room.kind==='challenge'){
+  rect(c,'#202932',x-140,102,280,13);rect(c,'#867358',x-140,103,280,3);
+  for(let i=-5;i<=5;i++){const xx=x+i*24;rect(c,'#3e4449',xx,115,4,105);path(c,'#a08863',[xx-3,213,xx+7,213,xx+2,233]);}
+  for(const dx of [-125,125]){path(c,'#8b6a48',[x+dx,112,x+dx,285],3);for(let y=122;y<279;y+=12)rect(c,'#af8b5a',x+dx-2,y,4,3);}
+ }else if(room.kind==='sanctuary'){
+  for(const dx of [-80,80]){statue(c,x+dx,439);candle(c,x+dx-22,439,time,.85);}
+ }else if(room.kind==='treasure'){
+  arch(c,'#423528',x-54,171,108,140);arch(c,'#88714c',x-48,177,96,130);arch(c,'#171a25',x-42,184,84,118);
+  path(c,'#b49157',[x-23,217,x,192,x+23,217,x,251]);path(c,'#ecd097',[x-11,217,x,205,x+11,217,x,234]);
+ }
+ void zone;
+}
 /** Draw before all pickups and actors. Uses exactly the simulation's platform/door coordinates. */
 export function drawBackground(c:Ctx,room:Room,cameraX:number,time:number,floor:number):void{
   c.save();c.imageSmoothingEnabled=false;
   rect(c,'#0b1420',0,0,W,H);
   // One panoramic hall, never tiled: only a single moon exists throughout a room.
   const travel=Math.max(1,room.width-W),p=Math.max(0,Math.min(1,cameraX/travel));
-  const bx=Math.round(-12-p*176),by=-46,bw=1160,bh=653;
-  if(plate.complete&&plate.naturalWidth)c.drawImage(plate,bx,by,bw,bh);
-  const zone=(floor-1)%4;
-  const bellRoom=room.kind==='boss';
+  const zone=chapterOf(room,floor),layout=room.layout??0;
+  const bx=Math.round(-12-Math.min(cameraX*.35,176)),by=zone===1||zone===2?-59:zone===0?-46:-22,bw=1160,bh=653;
+  if(zone===0&&plate.complete&&plate.naturalWidth)c.drawImage(plate,bx,by,bw,bh);
+  else if(chapterAtlas.complete&&chapterAtlas.naturalWidth){
+   const index=zone-1,sw=Math.floor(chapterAtlas.naturalWidth/2),sh=Math.floor(chapterAtlas.naturalHeight/2);
+   c.drawImage(chapterAtlas,(index%2)*sw,Math.floor(index/2)*sh,sw,sh,bx,by,bw,bh);
+  }
+  const bellRoom=zone===3&&room.kind==='boss';
   const brokenBell=bellRoom&&room.enemies.some(e=>e.kind==='boss'&&e.bossPhase===2);
-  if(zone===1)rect(c,'#274c6229',0,0,W,FLOOR);
-  if(zone===2)rect(c,'#58483f25',0,0,W,FLOOR);
-  if(zone===3)rect(c,'#26245532',0,0,W,FLOOR);
+  // Each chapter uses its own architecture, not a recolor of the banquet plate.
   // Deliberate contrast separation behind the action band while retaining architecture above.
   const dark=c.createLinearGradient(0,255,0,442);dark.addColorStop(0,'#06112000');dark.addColorStop(.6,'#09142127');dark.addColorStop(1,'#08132191');c.fillStyle=dark;c.fillRect(0,255,W,187);
-  // Candle illumination tracks the practical sources in the generated plate.
-  glow(c,bx+300,by+135,138,'#ed8d39',.035+Math.sin(time*4)*.012);
-  glow(c,bx+503,by+371,105,'#df8839',.055+Math.sin(time*7)*.012);
-  const moonx=bx+704;
-  c.save();c.globalAlpha=.028+Math.sin(time*.4)*.004;path(c,'#c5deeb',[moonx-46,105,moonx+27,110,moonx-151,440,moonx-266,440]);c.restore();
-  // A pair of almost imperceptible portrait eyes, aligned with the source painting.
-  rect(c,'#cabb8b70',bx+135+Math.sin(time*.24)*1.1,by+146,2,1);rect(c,'#cabb8b70',bx+141+Math.sin(time*.24)*1.1,by+146,2,1);
+  if(zone===0){
+   glow(c,bx+300,by+135,138,'#ed8d39',.035+Math.sin(time*4)*.012);
+   glow(c,bx+503,by+371,105,'#df8839',.055+Math.sin(time*7)*.012);
+   const moonx=bx+704;c.save();c.globalAlpha=.028+Math.sin(time*.4)*.004;path(c,'#c5deeb',[moonx-46,105,moonx+27,110,moonx-151,440,moonx-266,440]);c.restore();
+   rect(c,'#cabb8b70',bx+135+Math.sin(time*.24)*1.1,by+146,2,1);rect(c,'#cabb8b70',bx+141+Math.sin(time*.24)*1.1,by+146,2,1);
+  }else if(zone===1){glow(c,bx+590,170,250,'#8b79d9',.045);}
+  else if(zone===2){for(const x of [190,480,805])glow(c,x-p*25,300,100,'#74c8a8',.045);}
+  else if(zone===4){glow(c,bx+578,50,180,'#e8ad5d',.05);}
   c.save();c.translate(-Math.round(cameraX),0);
-  for(let x=310;x<room.width-150;x+=670){
+  c.save();c.globalAlpha=.28;
+  for(let x=310+layout*37;x<room.width-150;x+=670){
     if(x-cameraX<-200||x-cameraX>1140)continue;
     if(zone===1)bookshelf(c,x-65,429,116,room.seed+x);
     else if(zone===2){statue(c,x,439);for(const dx of [-28,28])candle(c,x+dx,439,time,.75);}
     else if(zone===3){gear(c,x+15,185,69,time*.065);gear(c,x+87,264,42,-time*.108);path(c,'#283340',[x+15,0,x+15,176],6);}
-    else {
+    else if(zone===4){
+      // Royal memorial pillars and a torn standard frame the throne chapter.
+      rect(c,'#17141e',x-18,268,36,170);rect(c,'#71583b',x-18,268,4,166);rect(c,'#a28451',x-22,265,44,4);
+      path(c,'#502b37',[x+13,280,x+76,280,x+72,376,x+59,361,x+39,380,x+19,362]);
+      path(c,'#b59561',[x+28,300,x+39,315,x+46,297,x+54,315,x+66,300,x+61,324,x+33,324]);
+      rect(c,'#a68c56',x+32,329,30,2);
+    }else {
       // Broken pew with satin runner: low silhouette avoids the combat read.
       rect(c,'#100f17',x-36,423,83,14);rect(c,'#5b3b33',x-36,420,83,4);rect(c,'#a07a4b',x-35,420,82,1);
       rect(c,'#271b20',x-31,425,7,14);rect(c,'#36222a',x+35,424,7,15);
@@ -170,6 +213,8 @@ export function drawBackground(c:Ctx,room:Room,cameraX:number,time:number,floor:
       rect(c,'#b38b55',x-4,420,1,11);
     }
   }
+  c.restore();
+  roomLandmark(c,room,zone,time);
   if(bellRoom)hangingBell(c,room.width*.5,brokenBell,time);
   c.restore();
   if(brokenBell){
@@ -178,7 +223,7 @@ export function drawBackground(c:Ctx,room:Room,cameraX:number,time:number,floor:
   if(zone===1){for(let i=0;i<6;i++){const xx=(i*191+time*9-cameraX*.2)%1040-30,yy=140+Math.sin(time*.7+i)*25+i*26;path(c,'#c5c0a147',[xx,yy,xx+8,yy-3,xx+10,yy+4,xx+3,yy+6]);}}
   if(zone===3){
     c.save();c.globalAlpha=.1;for(let i=0;i<36;i++){const x=(i*47-time*42)%1100;const y=(i*83+time*194)%400;path(c,'#a1bccb',[x,y,x-5,y+21],1);}c.restore();
-    // Very brief low-intensity lightning; reduced-motion time is frozen by renderer.
+    // Renderer supplies stable ambient time when reduced motion is enabled.
     const phase=(time+room.seed%13)%13;if(phase<.1)rect(c,'#a4bdd70b',0,0,W,440);
   }
   c.drawImage(floorCanvas(room,floor),Math.round(-cameraX),0);
@@ -186,6 +231,7 @@ export function drawBackground(c:Ctx,room:Room,cameraX:number,time:number,floor:
   for(let wx=145;wx<room.width-50;wx+=557){const xx=wx-cameraX;if(xx<-80||xx>1040)continue;
     glow(c,xx,422,61,'#db8c3e',.11+Math.sin(time*5+wx)*.015);candle(c,xx,440,time,.8);candle(c,xx+9,440,time+.7,.54);
   }
+  if(zone===4){for(let i=0;i<8;i++){const x=(i*157+time*6-cameraX*.15+1400)%1060-50,y=80+(i*43+time*11)%350;path(c,'#be855637',[x,y,x+4,y-6,x+2,y+7]);}}
   // Sparse drifting dust follows the light, rendered on the same pixel grid.
   for(let i=0;i<18;i++){const xx=(i*149+Math.sin(time*.22+i)*25-cameraX*.06+1200)%1040-40;const yy=72+(i*37+time*2.5)%326;rect(c,i%3===0?'#ead3a84b':'#aac9ce36',xx,yy,1+(i%2),1+(i%2));}
   c.restore();

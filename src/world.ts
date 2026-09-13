@@ -1,45 +1,46 @@
-import type {Room,RoomKind,Enemy} from './types';
+import type {Room,RoomKind,Enemy,Platform} from './types';
+import {CHAPTERS,chapterRoute,ROOM_NAMES} from './content';
 export function random(seed:number){let a=seed>>>0;return ()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 export function floorCount(seed:number){return 3+Math.floor(random(seed)()*3);}
-const zones=[['残烛宴会厅','绯红长廊','月下酒窖','碎镜舞厅','荆棘中庭','无声侧厅'],['月蚀藏书塔','禁书回廊','星图书房','漂浮档案馆','月影书斋','秘法观测厅'],['圣骨长廊','沉眠墓室','骨白礼拜堂','忏悔拱廊','寂静圣坛','封棺密室'],['暴雨钟楼','悬钟回廊','锈蚀机枢','风暴露台','残钟侧厅','断链中庭']];
+function platforms(layout:number,width:number):Platform[]{
+ const presets=[[[260,345,155],[580,245,160],[850,345,190]],[[230,350,170],[500,330,210],[820,350,180]],[[300,330,170],[560,245,240],[910,330,160]],[[270,350,130],[440,245,180],[760,350,220]],[[230,345,180],[570,345,180],[920,245,220]]];
+ return presets[layout].filter(([x])=>x<width-230).map(([x,y,w])=>({x,y,w}));
+}
 export function createFloor(seed:number,floor:number):Room[]{
- const names=zones[(floor-1)%4];
- const rng=random(seed+floor*7919), ri=(a:number,b:number)=>a+Math.floor(rng()*(b-a+1));
- const rooms:Room[]=[]; const combatCount=ri(2,4);
- const kinds:RoomKind[]=['entrance','combat','elite',...Array<RoomKind>(combatCount-1).fill('combat'),'elite','boss'];
- function add(kind:RoomKind,mapX:number,mapY:number):Room{
-  const id=rooms.length,width=kind==='boss'?1560:ri(14,18)*100;
-  const room:Room={id,kind,name:kind==='entrance'?['烛火门厅','藏书塔入口','圣骨堂前厅','钟楼入口'][(floor-1)%4]:kind==='elite'?(rooms.filter(r=>r.kind==='elite').length===0?'铁誓行刑庭':'碎甲守卫厅'):kind==='boss'?'负钟者的谒见厅':kind==='treasure'?'封缄秘库':kind==='sanctuary'?'烛火圣所':names[ri(0,names.length-1)],width,seed:ri(1,9999999),platforms:[],doors:[],props:[],visited:false,cleared:false,mapX,mapY,enemies:[],initialized:false};
-  for(let x=260;x<width-200;x+=ri(220,300)){room.platforms.push({x,y:ri(0,1)?350:330,w:ri(120,190)});if(rng()>.6)room.platforms.push({x:x+60,y:245,w:120});}
-  if(kind==='treasure') room.props.push({x:width/2,y:440,kind:'chest',used:false});
-  if(kind==='sanctuary') room.props.push({x:width/2,y:440,kind:'altar',used:false});
-  if(kind==='boss')room.props.push({x:width-145,y:440,kind:'exit',used:false});
-  if(kind==='combat' && rng()>.45)room.props.push({x:width*.67,y:440,kind:'chest',used:false});
-  rooms.push(room);return room;
+ const rng=random(seed+floor*7919),ri=(a:number,b:number)=>a+Math.floor(rng()*(b-a+1));
+ const chapter=chapterRoute(seed,floorCount(seed))[Math.min(floor-1,floorCount(seed)-1)],zone=CHAPTERS[chapter],rooms:Room[]=[],flip=rng()>.5?1:-1;
+ function add(kind:RoomKind,mx:number,my:number,encounter?:string):number{
+  const id=rooms.length,width=kind==='boss'?1500:['event','shop','sanctuary','treasure','entrance'].includes(kind)?1080:ri(12,15)*100,layout=(id+chapter+ri(0,4))%5;
+  const name=kind==='entrance'?zone.name+' · 入口':kind==='boss'?zone.name+' · 谒见厅':kind==='elite'?'印记守卫 · '+(rooms.filter(r=>r.kind==='elite').length+1):kind==='shop'?'拾骨商人的铺席':kind==='event'?'莉娅的遗灯':kind==='sanctuary'?'旅人的烛火':kind==='challenge'?'贪欲试炼':kind==='treasure'?'封缄遗物库':ROOM_NAMES[layout];
+  const room:Room={id,kind,name,chapter,layout,encounter,width,seed:ri(1,9999999),platforms:kind==='boss'?[{x:280,y:330,w:180},{x:1030,y:330,w:180}]:platforms(layout,width),doors:[],props:[],visited:false,cleared:false,mapX:mx,mapY:my*flip,enemies:[],initialized:false};
+  const prop=kind==='treasure'?'chest':kind==='sanctuary'?'altar':kind==='boss'?'exit':kind==='shop'?'shop':kind==='event'?'memory':kind==='challenge'?'trial':undefined;
+  if(prop)room.props.push({x:kind==='boss'?width-145:width*.52,y:440,kind:prop,used:false});
+  if(kind==='treasure')room.props.push({x:width*.75,y:440,kind:'pact',used:false});
+  rooms.push(room);return id;
  }
- kinds.forEach((k,i)=>add(k,i,0));
- for(let i=0;i<kinds.length-1;i++){const a=rooms[i],b=rooms[i+1];a.doors.push({x:a.width-85,y:440,target:b.id,label:b.name});b.doors.push({x:85,y:440,target:a.id,label:a.name});}
- // Side branches intentionally placed before traversal unlocks to invite revisits.
- for(const [at,kind,gate] of [[1,'treasure','doubleJump'],[2,'sanctuary',undefined],[kinds.length-3,'treasure','breakDash']] as const){
-  const parent=rooms[at], branch=add(kind,at,kind==='sanctuary'?1:-1);
-  const y=gate==='doubleJump'?245:440,x=parent.width*.52;
-  if(gate==='doubleJump')parent.platforms.push({x:x-60,y:245,w:120},{x:x-220,y:345,w:100});
-  parent.doors.push({x,y,target:branch.id,gate,label:gate==='doubleJump'?'高塔秘库 · 二段跳':gate==='breakDash'?'封印秘库 · 破障冲刺':branch.name});
-  branch.doors.push({x:85,y:440,target:parent.id,label:'返回 '+parent.name});
+ add('entrance',0,0);add('combat',1,0);add('elite',2,-1,zone.elites[0]);add('combat',2,1);add('elite',3,1,zone.elites[1]);add('combat',3,-1);add('boss',4,0,zone.boss);
+ add('shop',0,-1);add('event',0,1);add('sanctuary',2,2);add('treasure',2,-2);add('challenge',4,1);
+ const links:[number,number,('doubleJump'|'breakDash')?][]=[[0,1],[1,2],[1,3],[2,5],[3,4],[4,6],[5,6],[0,7],[0,8],[3,9],[2,10,'doubleJump'],[4,11]];
+ if(rng()>.45){const id=add('treasure',4,-1);links.push([5,id,'breakDash']);}
+ if(rng()>.5){const id=add('combat',5,1);rooms[id].name='遗落军械室';rooms[id].props.push({x:rooms[id].width*.65,y:440,kind:'chest',used:false});links.push([11,id]);}
+ for(const [a,b,gate]of links){
+  for(const [from,to,forward]of [[a,b,true],[b,a,false]] as const){const room=rooms[from];let x=forward?room.width-85:85;const occupied=room.doors.some(d=>Math.abs(d.x-x)<100);if(occupied)x=room.width*(room.doors.length===1?.38:.65);
+   room.doors.push({x,y:440,target:to,gate:forward?gate:undefined,label:rooms[to].name});
+  }
  }
  return rooms;
 }
 export function populate(room:Room,floor:number):Enemy[]{
  const rng=random(room.seed+floor*101),enemies:Enemy[]=[];
- if(room.kind==='treasure'||room.kind==='sanctuary')return enemies;
- const count=room.kind==='entrance'?6:room.kind==='boss'?7:12+Math.floor(rng()*10)+floor*2;
- const scale=1+(floor-1)*.22;
+ if(['treasure','sanctuary','shop','event','challenge'].includes(room.kind))return enemies;
+ const chapter=room.chapter??0,count=room.kind==='entrance'?4:room.kind==='boss'?1:room.kind==='elite'?5:8+Math.floor(rng()*5),scale=1+(floor-1)*.18;
+ const roster=[['skeleton','goblin','flying-eye'],['goblin','wraith','flying-eye'],['skeleton','mushroom','wraith'],['flying-eye','goblin','wraith'],['skeleton','wraith','goblin']][chapter];
  for(let i=0;i<count;i++){
-  let kind:Enemy['kind']=rng()<.24?'bat':rng()<.2?'wraith':'skeleton';
-  if(i===0 && (room.kind==='elite'||room.kind==='boss'))kind=room.kind;
-  const hp=Math.round(({skeleton:34,bat:23,wraith:44,elite:270,boss:760}[kind])*scale);
-  const x=kind==='boss'?room.width*.62:kind==='elite'?room.width*.54:350+rng()*(room.width-540),y=kind==='bat'?260+rng()*90:kind==='wraith'?345:440;
-  enemies.push({id:room.id*100+i,kind,x,y,vx:0,vy:0,hp,maxHp:hp,facing:-1,timer:rng()*2+1,attack:0,flash:0,dead:false,homeY:y});
+  let variant=roster[Math.floor(rng()*roster.length)],kind:Enemy['kind']=variant==='flying-eye'?'bat':variant==='wraith'?'wraith':'skeleton';
+  if(i===0&&(room.kind==='elite'||room.kind==='boss')){kind=room.kind;variant=room.encounter??(kind==='boss'?'gate-warden':'butcher');}
+  const hp=Math.round(({skeleton:30,bat:19,wraith:36,elite:220,boss:600}[kind])*scale);
+  const x=kind==='boss'?room.width*.65:kind==='elite'?room.width*.58:340+rng()*(room.width-510),y=kind==='bat'?285+rng()*55:kind==='wraith'?345:440;
+  enemies.push({id:room.id*100+i,kind,variant,x,y,vx:0,vy:0,hp,maxHp:hp,facing:-1,timer:rng()*2+1,attack:0,flash:0,dead:false,homeY:y});
  }
  return enemies;
 }

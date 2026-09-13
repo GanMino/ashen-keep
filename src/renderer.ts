@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 import {drawProp} from './art';
 import {drawBackground,drawForeground,assetsReady} from './environment';
-import {drawActor} from './actors';
+import {drawActor as fallbackActor} from './actors';
+import {drawSpriteActor,spritesReady} from './sprites';
+import {drawHazards,drawJourneyProp,drawBuild} from './scene-feedback';
+import {encounterFor} from './encounters';
+import type {ActorPose} from './types';
+const drawActor=(c:CanvasRenderingContext2D,p:ActorPose)=>{if(!drawSpriteActor(c,p))fallbackActor(c,p);};
 import {drawEffects,drawDebris} from './effects';
 import {Game,W,H,strikeRadius} from './game';
 export class GameRenderer {
- ready=assetsReady;renderer:THREE.WebGLRenderer;scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+ ready=Promise.all([assetsReady,spritesReady]);renderer:THREE.WebGLRenderer;scene=new THREE.Scene();camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
  surface=document.createElement('canvas');ctx:CanvasRenderingContext2D;texture:THREE.CanvasTexture;material:THREE.ShaderMaterial;
  constructor(canvas:HTMLCanvasElement){
   this.surface.width=W;this.surface.height=H;this.ctx=this.surface.getContext('2d')!;this.ctx.imageSmoothingEnabled=false;
@@ -26,15 +31,17 @@ export class GameRenderer {
  render(g:Game){const c=this.ctx,t=g.time,p=g.player;const camera=Math.round(g.cameraX);c.save();c.clearRect(0,0,W,H);
   if(!g.reducedMotion&&g.shake>0)c.translate(Math.round(Math.sin(t*130)*g.shake*12*g.shakeDirection),Math.round(Math.cos(t*150)*g.shake*7));
   drawBackground(c,g.room,camera,g.reducedMotion?8:t,g.floor);
-  for(const prop of g.room.props){if(prop.kind==='exit'&&!g.bossDefeated)continue;drawProp(c,{...prop,x:prop.x-camera},t);}
+  for(const prop of g.room.props){if(prop.kind==='exit'&&!g.bossDefeated)continue;if(!drawJourneyProp(c,{...prop,x:prop.x-camera},t))drawProp(c,{...prop,x:prop.x-camera},t);}
   for(const door of g.room.doors){const x=door.x-camera;if(x<-90||x>W+90)continue;
-   c.font='11px monospace';c.textAlign='center';const locked=door.gate==='doubleJump'&&!g.doubleJump||door.gate==='breakDash'&&!g.breakDash||g.rooms[door.target].kind==='boss'&&g.elites<2;c.fillStyle=locked?'#c8a788':'#b2c9bc';c.fillText(locked?'◇ 封印':'◇ '+(door.x<110?'返回':g.rooms[door.target].kind==='boss'?'负钟者之门':'通道'),x,door.y-87);
+   c.font='11px monospace';c.textAlign='center';const locked=door.gate==='doubleJump'&&!g.doubleJump||door.gate==='breakDash'&&!g.breakDash||g.rooms[door.target].kind==='boss'&&g.elites<2;c.fillStyle=locked?'#c8a788':'#b2c9bc';c.fillText(locked?'◇ 封印':'◇ '+(door.x<110?'返回':g.rooms[door.target].kind==='boss'?'领主之门':'通道'),x,door.y-87);
   }
+  drawHazards(c,g,camera);
   for(const e of g.room.enemies){if(e.dead||e.x-camera<-100||e.x-camera>W+100)continue;
-   if(e.attack>0){c.save();c.globalAlpha=.3+Math.sin(t*20)*.1;c.fillStyle=e.kind==='boss'?'#f58b60':'#cf6551';const width=strikeRadius(e.kind)*2;c.fillRect(e.x-camera-width/2,436,width,4);c.fillRect(e.x-camera-width/2,431,3,9);c.fillRect(e.x-camera+width/2,431,3,9);c.restore();c.fillStyle='#f4cd9a';c.font='bold 16px serif';c.textAlign='center';c.fillText('!',e.x-camera,e.y-(e.kind==='boss'?150:e.kind==='elite'?115:75));}
-   const duration=e.kind==='boss'?.85:e.kind==='elite'?.6:.45;
-   const enemyProgress=e.attack>0?(e.attack>.12?.2*(1-e.attack/duration):.2+(1-e.attack/.12)*.35):(e.recovery??0)>0?.55+(1-(e.recovery??0)/.18)*.45:undefined;
-   drawActor(c,{kind:e.kind,x:e.x-camera,y:e.y,facing:e.facing,moving:e.attack<=0&&!(e.recovery??0),grounded:e.kind!=='bat'&&e.kind!=='wraith',attack:Math.max(e.attack,e.recovery??0),flash:e.flash,time:t+e.id*.31,armorBroken:e.armorBroken,bossPhase:e.bossPhase??1,attackProgress:enemyProgress});
+   if(e.attack>0&&e.kind!=='boss'&&e.kind!=='elite'){c.save();c.globalAlpha=.3+Math.sin(t*20)*.1;c.fillStyle='#cf6551';const width=strikeRadius(e.kind)*2;c.fillRect(e.x-camera-width/2,436,width,4);c.fillRect(e.x-camera-width/2,431,3,9);c.fillRect(e.x-camera+width/2,431,3,9);c.restore();c.fillStyle='#f4cd9a';c.font='bold 16px serif';c.textAlign='center';c.fillText('!',e.x-camera,e.y-75);}
+   const special=e.kind==='boss'||e.kind==='elite';const duration=special?(e.variant==='storm'?1.15:e.variant==='hollow-king'?1:.9):.45;const recovery=special?(e.kind==='boss'?1.05:1.15):.18;
+   const enemyProgress=e.attack>0?(e.attack>.12?.2*(1-e.attack/duration):.2+(1-e.attack/.12)*.25):(e.recovery??0)>0?.45+(1-(e.recovery??0)/recovery)*.55:undefined;
+   drawActor(c,{kind:e.kind,variant:e.variant,telegraph:e.telegraph,combo:(e.move??0)%2+1,x:e.x-camera,y:e.y,facing:e.facing,moving:e.attack<=0&&!(e.recovery??0),grounded:e.kind!=='bat'&&e.kind!=='wraith',attack:Math.max(e.attack,e.recovery??0),flash:e.flash,time:t+e.id*.31,armorBroken:e.armorBroken,bossPhase:e.bossPhase??1,attackProgress:enemyProgress});
+   if(special){c.textAlign='center';c.font='11px serif';c.fillStyle=encounterFor(e).color;c.fillText(e.attack>0?(e.telegraph??''):encounterFor(e).name,e.x-camera,e.y-(e.kind==='boss'?158:116));}
    if((e.burn??0)>0){c.fillStyle='#ffa75f';c.font='15px serif';c.textAlign='center';c.fillText('♨',e.x-camera,e.y-79);c.fillStyle='#cf7048';for(let i=0;i<3;i++){const k=(t*1.3+i*.3)%1;c.globalAlpha=1-k;c.fillRect(e.x-camera+Math.sin(i*3+t)*10,e.y-20-k*48,2,5);}c.globalAlpha=1;}
    if(e.hp<e.maxHp||e.kind==='elite'){const width=e.kind==='boss'?80:e.kind==='elite'?55:28,y=e.y-(e.kind==='boss'?145:e.kind==='elite'?108:71);c.fillStyle='#182225';c.fillRect(e.x-camera-width/2,y,width,3);c.fillStyle=e.kind==='elite'?'#dcb878':'#c58c85';c.fillRect(e.x-camera-width/2,y,width*Math.max(0,e.hp/e.maxHp),3);}
   }
@@ -43,6 +50,7 @@ export class GameRenderer {
   if(p.dash>0&&!g.reducedMotion){for(let i=3;i>=1;i--){c.save();c.globalAlpha=.07*(4-i);drawActor(c,{kind:g.selectedClass,x:p.x-camera-p.facing*i*19,y:p.y,facing:p.facing,moving:true,grounded:p.grounded,attack:0,flash:0,time:t-i*.03});c.restore();}}
   const invulnAlpha=p.invuln>0&&!g.reducedMotion?.68+Math.sin(t*35)*.22:1;c.save();c.globalAlpha=invulnAlpha;
   drawActor(c,{kind:g.selectedClass,x:p.x-camera,y:p.y,facing:p.attack>0?g.attackFacing:p.facing,moving:Math.abs(p.vx)>0,grounded:p.grounded,attack:p.attack,flash:0,time:t,attackProgress:p.attack>0?1-p.attack/g.attackDuration:undefined,combo:g.attackCombo,skill:g.attackIsSkill,velocityY:p.vy});c.restore();
+  drawBuild(c,g,camera);
   for(const shot of g.shots){const x=shot.x-camera,y=shot.y;c.save();c.translate(x,y);c.rotate(Math.atan2(shot.vy,shot.vx));
    if(!shot.hostile&&g.selectedClass==='ranger'){
     c.strokeStyle='#78998f';c.globalAlpha=.35;c.lineWidth=2;c.beginPath();c.moveTo(-46,0);c.lineTo(5,0);c.stroke();c.globalAlpha=1;c.fillStyle='#c9d4b4';c.fillRect(-18,-1,27,2);c.fillStyle='#f1f3ce';c.beginPath();c.moveTo(15,0);c.lineTo(5,-4);c.lineTo(6,4);c.closePath();c.fill();c.fillStyle='#75cbb7';c.fillRect(-19,-3,5,6);

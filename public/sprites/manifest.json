@@ -1,0 +1,503 @@
+{
+  "knight": {
+    "w": 180,
+    "h": 180,
+    "pivotX": 90,
+    "pivotY": 114,
+    "bodyHeight": 51,
+    "clips": {
+      "jump": {
+        "file": "knight/jump.png",
+        "frames": 3
+      },
+      "idle": {
+        "file": "knight/idle.png",
+        "frames": 11
+      },
+      "fall": {
+        "file": "knight/fall.png",
+        "frames": 3
+      },
+      "hit": {
+        "file": "knight/hit.png",
+        "frames": 4
+      },
+      "run": {
+        "file": "knight/run.png",
+        "frames": 8
+      },
+      "attack2": {
+        "file": "knight/attack2.png",
+        "frames": 7
+      },
+      "attack1": {
+        "file": "knight/attack1.png",
+        "frames": 7
+      },
+      "death": {
+        "file": "knight/death.png",
+        "frames": 11
+      }
+    }
+  },
+  "witch": {
+    "w": 231,
+    "h": 190,
+    "pivotX": 110,
+    "pivotY": 141,
+    "bodyHeight": 86,
+    "clips": {
+      "jump": {
+        "file": "witch/jump.png",
+        "frames": 2
+      },
+      "idle": {
+        "file": "witch/idle.png",
+        "frames": 6
+      },
+      "fall": {
+        "file": "witch/fall.png",
+        "frames": 2
+      },
+      "run": {
+        "file": "witch/run.png",
+        "frames": 8
+      },
+      "attack2": {
+        "file": "witch/attack2.png",
+        "frames": 8
+      },
+      "hit": {
+        "file": "witch/hit.png",
+        "frames": 4
+      },
+      "attack1": {
+        "file": "witch/attack1.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "witch/death.png",
+        "frames": 7
+      }
+    }
+  },
+  "ranger": {
+    "w": 100,
+    "h": 100,
+    "pivotX": 50,
+    "pivotY": 67,
+    "bodyHeight": 36,
+    "clips": {
+      "jump": {
+        "file": "ranger/jump.png",
+        "frames": 2
+      },
+      "idle": {
+        "file": "ranger/idle.png",
+        "frames": 10
+      },
+      "fall": {
+        "file": "ranger/fall.png",
+        "frames": 2
+      },
+      "run": {
+        "file": "ranger/run.png",
+        "frames": 8
+      },
+      "attack": {
+        "file": "ranger/attack.png",
+        "frames": 6
+      },
+      "death": {
+        "file": "ranger/death.png",
+        "frames": 10
+      },
+      "hit": {
+        "file": "ranger/hit.png",
+        "frames": 3
+      }
+    }
+  },
+  "warden": {
+    "w": 135,
+    "h": 135,
+    "pivotX": 67,
+    "pivotY": 86,
+    "bodyHeight": 38,
+    "clips": {
+      "jump": {
+        "file": "warden/jump.png",
+        "frames": 2
+      },
+      "idle": {
+        "file": "warden/idle.png",
+        "frames": 10
+      },
+      "fall": {
+        "file": "warden/fall.png",
+        "frames": 2
+      },
+      "attack3": {
+        "file": "warden/attack3.png",
+        "frames": 5
+      },
+      "run": {
+        "file": "warden/run.png",
+        "frames": 6
+      },
+      "attack2": {
+        "file": "warden/attack2.png",
+        "frames": 4
+      },
+      "attack1": {
+        "file": "warden/attack1.png",
+        "frames": 4
+      },
+      "death": {
+        "file": "warden/death.png",
+        "frames": 9
+      },
+      "hit": {
+        "file": "warden/hit.png",
+        "frames": 3
+      }
+    }
+  },
+  "lich": {
+    "w": 250,
+    "h": 250,
+    "pivotX": 125,
+    "pivotY": 167,
+    "bodyHeight": 95,
+    "clips": {
+      "jump": {
+        "file": "lich/jump.png",
+        "frames": 2
+      },
+      "idle": {
+        "file": "lich/idle.png",
+        "frames": 8
+      },
+      "fall": {
+        "file": "lich/fall.png",
+        "frames": 2
+      },
+      "hit": {
+        "file": "lich/hit.png",
+        "frames": 3
+      },
+      "run": {
+        "file": "lich/run.png",
+        "frames": 8
+      },
+      "attack2": {
+        "file": "lich/attack2.png",
+        "frames": 8
+      },
+      "attack1": {
+        "file": "lich/attack1.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "lich/death.png",
+        "frames": 7
+      }
+    }
+  },
+  "king": {
+    "w": 160,
+    "h": 111,
+    "pivotX": 80,
+    "pivotY": 105,
+    "bodyHeight": 54,
+    "clips": {
+      "jump": {
+        "file": "king/jump.png",
+        "frames": 2
+      },
+      "idle": {
+        "file": "king/idle.png",
+        "frames": 8
+      },
+      "fall": {
+        "file": "king/fall.png",
+        "frames": 2
+      },
+      "hit": {
+        "file": "king/hit.png",
+        "frames": 4
+      },
+      "attack3": {
+        "file": "king/attack3.png",
+        "frames": 4
+      },
+      "run": {
+        "file": "king/run.png",
+        "frames": 8
+      },
+      "attack2": {
+        "file": "king/attack2.png",
+        "frames": 4
+      },
+      "attack1": {
+        "file": "king/attack1.png",
+        "frames": 4
+      },
+      "death": {
+        "file": "king/death.png",
+        "frames": 6
+      }
+    }
+  },
+  "worm": {
+    "w": 90,
+    "h": 90,
+    "pivotX": 45,
+    "pivotY": 58,
+    "bodyHeight": 41,
+    "clips": {
+      "idle": {
+        "file": "worm/idle.png",
+        "frames": 9
+      },
+      "run": {
+        "file": "worm/run.png",
+        "frames": 9
+      },
+      "attack": {
+        "file": "worm/attack.png",
+        "frames": 16
+      },
+      "death": {
+        "file": "worm/death.png",
+        "frames": 8
+      },
+      "hit": {
+        "file": "worm/hit.png",
+        "frames": 3
+      }
+    }
+  },
+  "firemage": {
+    "w": 150,
+    "h": 150,
+    "pivotX": 75,
+    "pivotY": 102,
+    "bodyHeight": 55,
+    "clips": {
+      "run": {
+        "file": "firemage/run.png",
+        "frames": 8
+      },
+      "idle": {
+        "file": "firemage/idle.png",
+        "frames": 8
+      },
+      "hit": {
+        "file": "firemage/hit.png",
+        "frames": 4
+      },
+      "attack": {
+        "file": "firemage/attack.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "firemage/death.png",
+        "frames": 5
+      }
+    }
+  },
+  "butcher": {
+    "w": 184,
+    "h": 137,
+    "pivotX": 92,
+    "pivotY": 125,
+    "bodyHeight": 81,
+    "clips": {
+      "jump": {
+        "file": "butcher/jump.png",
+        "frames": 2
+      },
+      "idle": {
+        "file": "butcher/idle.png",
+        "frames": 6
+      },
+      "fall": {
+        "file": "butcher/fall.png",
+        "frames": 2
+      },
+      "run": {
+        "file": "butcher/run.png",
+        "frames": 8
+      },
+      "attack2": {
+        "file": "butcher/attack2.png",
+        "frames": 4
+      },
+      "hit": {
+        "file": "butcher/hit.png",
+        "frames": 3
+      },
+      "attack1": {
+        "file": "butcher/attack1.png",
+        "frames": 4
+      },
+      "death": {
+        "file": "butcher/death.png",
+        "frames": 9
+      },
+      "attack3": {
+        "file": "butcher/attack3.png",
+        "frames": 4
+      }
+    }
+  },
+  "skeleton": {
+    "w": 150,
+    "h": 150,
+    "pivotX": 75,
+    "pivotY": 101,
+    "bodyHeight": 51,
+    "clips": {
+      "shield": {
+        "file": "skeleton/shield.png",
+        "frames": 4
+      },
+      "idle": {
+        "file": "skeleton/idle.png",
+        "frames": 4
+      },
+      "hit": {
+        "file": "skeleton/hit.png",
+        "frames": 4
+      },
+      "run": {
+        "file": "skeleton/run.png",
+        "frames": 4
+      },
+      "attack": {
+        "file": "skeleton/attack.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "skeleton/death.png",
+        "frames": 4
+      },
+      "attack2": {
+        "file": "skeleton/attack2.png",
+        "frames": 8
+      },
+      "attack3": {
+        "file": "skeleton/attack3.png",
+        "frames": 6
+      }
+    }
+  },
+  "goblin": {
+    "w": 150,
+    "h": 150,
+    "pivotX": 75,
+    "pivotY": 101,
+    "bodyHeight": 36,
+    "clips": {
+      "idle": {
+        "file": "goblin/idle.png",
+        "frames": 4
+      },
+      "hit": {
+        "file": "goblin/hit.png",
+        "frames": 4
+      },
+      "run": {
+        "file": "goblin/run.png",
+        "frames": 8
+      },
+      "attack": {
+        "file": "goblin/attack.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "goblin/death.png",
+        "frames": 4
+      },
+      "attack2": {
+        "file": "goblin/attack2.png",
+        "frames": 8
+      },
+      "attack3": {
+        "file": "goblin/attack3.png",
+        "frames": 12
+      }
+    }
+  },
+  "mushroom": {
+    "w": 150,
+    "h": 150,
+    "pivotX": 75,
+    "pivotY": 101,
+    "bodyHeight": 36,
+    "clips": {
+      "idle": {
+        "file": "mushroom/idle.png",
+        "frames": 4
+      },
+      "hit": {
+        "file": "mushroom/hit.png",
+        "frames": 4
+      },
+      "run": {
+        "file": "mushroom/run.png",
+        "frames": 8
+      },
+      "attack": {
+        "file": "mushroom/attack.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "mushroom/death.png",
+        "frames": 4
+      },
+      "attack2": {
+        "file": "mushroom/attack2.png",
+        "frames": 8
+      },
+      "attack3": {
+        "file": "mushroom/attack3.png",
+        "frames": 11
+      }
+    }
+  },
+  "flying-eye": {
+    "w": 150,
+    "h": 150,
+    "pivotX": 75,
+    "pivotY": 88,
+    "bodyHeight": 36,
+    "clips": {
+      "hit": {
+        "file": "flying-eye/hit.png",
+        "frames": 4
+      },
+      "idle": {
+        "file": "flying-eye/idle.png",
+        "frames": 8
+      },
+      "attack": {
+        "file": "flying-eye/attack.png",
+        "frames": 8
+      },
+      "death": {
+        "file": "flying-eye/death.png",
+        "frames": 4
+      },
+      "attack2": {
+        "file": "flying-eye/attack2.png",
+        "frames": 8
+      },
+      "attack3": {
+        "file": "flying-eye/attack3.png",
+        "frames": 6
+      }
+    }
+  }
+}
